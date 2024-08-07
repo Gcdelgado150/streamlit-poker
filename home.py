@@ -5,6 +5,8 @@ import plotly.graph_objects as go
 st.set_page_config(layout="wide")
 
 df = pd.read_csv("data/geral.csv").sort_values("Total com corte", ascending=True).reset_index(drop=True)
+st.dataframe(df, hide_index=True, on_select="ignore")
+
 cols_rodadas = [c for c in df.columns if c.startswith("Rodada")]
 df = df[["Players"] + cols_rodadas]
 
