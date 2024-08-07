@@ -8,7 +8,7 @@ st.set_page_config(layout="wide")
 def check_month_in_geral():
     df = pd.read_csv("data/geral.csv")
     if df[f"Rodada {st.session_state.current_month}"].isnull().all():
-        pass
+        status_save = True
     else:
         st.warning(f"O mês especificado {st.session_state.current_month} já ocorreu")
         status_save = False
@@ -124,9 +124,21 @@ def add_final_score():
 
 cols = st.columns(5)
 with cols[0]:
+    df_geral = pd.read_csv("data/geral.csv").sort_values("Players", ascending=True)
+    lista_jogadores = [player for player in df_geral.Players.values if player not in df.Players.values]
+
+    defaulted_player = st.selectbox("Adicionar um jogador já existente", lista_jogadores, index=None)
     new_player = st.text_input('Adicionar um novo jogador:')
+
+    if defaulted_player and not new_player:
+        new_player = defaulted_player
+    elif defaulted_player and new_player:
+        new_player = defaulted_player
+
+    # if not defaulted_player and 
     if st.button('Adidionar jogador'):
         add_player(new_player)
+        st.rerun()
 
 with cols[1]:
     st.write("Durante a partida:")
