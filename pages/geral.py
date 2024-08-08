@@ -51,6 +51,6 @@ styled_data = df.style.apply(highlight_lowest_cells, axis=1)
 st.title('Tabela com os cortes')
 st.dataframe(styled_data, hide_index=True, on_select="ignore")
 
-st.write("Os totais e totais com corte estão errados:")
+st.write("Os totais e totais com corte estão errados?")
 if st.button("Recalcular os totais da tabela geral"):
   recalculate_geral(df)
