@@ -180,6 +180,7 @@ st.write(f"Quantos rebuys no momento: {st.session_state.current_rebuys}")
 st.dataframe(df.sort_values("Players"), hide_index=True, on_select="ignore")
 st.write(f"Quantidade de fichas que tem na mesa: ", (df.Qtdy_Buy_in.sum() + df.Qtdy_Rebuy.sum()) * st.session_state.valor_buyin)
 
+##
 if st.button("Encerrar sessao"):
     if df[["Qtdy_Numero_fichas"]].isnull().values.any():
         st.warning("Ainda há jogadores que não informaram as fichas finais")

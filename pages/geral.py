@@ -10,6 +10,19 @@ st.title(f"Classificação Geral")
 
 df = pd.read_csv("data/geral_2024.csv").sort_values("Total com corte", ascending=False).reset_index(drop=True)
 cols_rodadas = [c for c in df.columns if c.startswith("Rodada")]
+
+# Function to highlight the first 3 rows (champions)
+def sum_desconsidering_lowest_cells(s):
+  lowest = s[cols_rodadas].sort_values(ascending=True).head(2).keys().tolist()
+  filtered_s = s.drop(lowest)
+  return filtered_s[filtered_s.index.str.contains('Rodada')].sum()
+
+def recalculate_geral(df):
+    df["Total"] = df[cols_rodadas].sum(axis=1)
+    df["Total com corte"] = df.apply(sum_desconsidering_lowest_cells, axis=1)
+    df = df.sort_values("Total com corte", ascending=False).reset_index(drop=True)
+    df.to_csv("data/geral_2024.csv", index=False)
+
 # Create two columns
 col1, col2 = st.columns([1, 6])
 
@@ -21,6 +34,7 @@ with col1:
     
     if st.button("Atualizar a classificação geral"):
         update_table_geral(month)
+  
 
 # Apply formatting to specified columns
 df[cols_rodadas + ["Total", "Total com corte"]] = df[cols_rodadas + ["Total", "Total com corte"]].applymap('{:,.2f}'.format)
@@ -34,5 +48,9 @@ def highlight_lowest_cells(s):
 styled_data = df.style.apply(highlight_lowest_cells, axis=1)
 
 # Display the styled DataFrame in Streamlit
-st.title('Highlighted Data Table')
+st.title('Tabela com os cortes')
 st.dataframe(styled_data, hide_index=True, on_select="ignore")
+
+st.write("Os totais e totais com corte estão errados:")
+if st.button("Recalcular os totais da tabela geral"):
+  recalculate_geral(df)

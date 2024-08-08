@@ -50,3 +50,4 @@ def update_table_geral(month):
     df["Total com corte"] = df.apply(apply_total_com_corte, axis=1)
     st.success("Saved!")
     df.to_csv("data/geral_2024.csv", index=False)
+
