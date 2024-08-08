@@ -47,6 +47,6 @@ def update_table_geral(month):
                     df.loc[s, rodada] = df_month[df_month["Players"] == player].Total.values[0]
 
     df["Total"] = df[cols_rodadas].sum()
-    df["Total com corte"] = df.apply(apply_total_com_corte, axis=0)
+    df["Total com corte"] = df.apply(apply_total_com_corte, axis=1)
     st.success("Saved!")
     df.to_csv("data/geral_2024.csv", index=False)

@@ -100,14 +100,15 @@ def define_howmany_rebuys(amount_players_elim):
 
 @st.dialog("Eliminação")
 def add_hit():
-    who_eliminated = st.selectbox("Quem eliminou:", df.Players.values)
+    lista_players = sorted(df.Players.values)
+    who_eliminated = st.selectbox("Quem eliminou:", lista_players)
 
     # Checkbox marker to see eliminated players
     st.write("Quais jogadores foram eliminados?")
-    players_eliminated = [st.checkbox(player) for player in df.Players.values]
-    players_elim = {player: players_eliminated[i] for i, player in enumerate(df.Players.values) if players_eliminated[i]}
+    players_eliminated = [st.checkbox(player) for player in lista_players]
+    players_elim = {player: players_eliminated[i] for i, player in enumerate(lista_players) if players_eliminated[i]}
 
-    if st.button("Concluir"):
+    if st.button("Hit!"):
         define_howmany_rebuys(len(players_elim))
         for player, _ in players_elim.items():
             df.loc[df["Players"] == who_eliminated, ["Qtdy_Hit"]] = df.loc[df["Players"] == who_eliminated, ["Qtdy_Hit"]] + 1
@@ -119,10 +120,12 @@ def add_hit():
 
 @st.dialog("Adicionando quantidade de fichas final!")
 def add_final_score():
-    player = st.selectbox("Qual jogador:", df.Players.values)
+    lista_players = df[df['Qtdy_Numero_fichas'].isna()].Players.values
+
+    player = st.selectbox("Qual jogador:", lista_players)
     valor = st.number_input(label="Valor", value=None, placeholder="Type a number...", format='%d', step=1)
 
-    if st.button("Concluires"):
+    if st.button("Final"):
         df.loc[df["Players"] == player, ["Qtdy_Numero_fichas"]] = valor
         if status_save:
             df.to_csv(table_name, index=False)
@@ -174,7 +177,8 @@ with cols[3]:
             st.warning("Sem necessidade!")
 
 st.write(f"Quantos rebuys no momento: {st.session_state.current_rebuys}")
-st.dataframe(df, hide_index=True, on_select="ignore")
+st.dataframe(df.sort_values("Players"), hide_index=True, on_select="ignore")
+st.write(f"Quantidade de fichas que tem na mesa: ", (df.Qtdy_Buy_in.sum() + df.Qtdy_Rebuy.sum()) * st.session_state.valor_buyin)
 
 if st.button("Encerrar sessao"):
     if df[["Qtdy_Numero_fichas"]].isnull().values.any():
