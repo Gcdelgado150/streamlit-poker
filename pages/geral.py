@@ -24,7 +24,7 @@ def recalculate_geral(df):
     df.to_csv("data/geral_2024.csv", index=False)
 
 # Create two columns
-col1, col2 = st.columns([1, 6])
+col1, col2 = st.columns([1, 5])
 
 # Place the button in the first column
 with col1:
