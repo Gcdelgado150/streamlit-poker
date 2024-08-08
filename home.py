@@ -2,10 +2,14 @@ import streamlit as st
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from helper_files import find_key_with_values
+
 st.set_page_config(layout="wide")
 
-df = pd.read_csv("data/geral.csv").sort_values("Total com corte", ascending=False).reset_index(drop=True)
+df = pd.read_csv("data/geral_2024.csv").sort_values("Total com corte", ascending=False).reset_index(drop=True)
+max_value = round(int(df["Total com corte"].max()*1.1) / 10) * 10 # Max value rounded to the nearest multiple of 10
 
+# Mostrar top 5
 st.write("Top 5")
 st.dataframe(df.head(5), hide_index=True, on_select="ignore")
 
@@ -14,7 +18,24 @@ df = df[["Players"] + cols_rodadas]
 
 # Valor total cumulativo por rodada
 if 1:
-    st.write("Valor total cumulativo por rodada")
+    to_print = []
+
+    # Pra cada player remove a dupla de rodada com menor valor 
+    for i, row in df.iterrows():
+        cleanedList = sorted([x for x in row[cols_rodadas].values
+                                if str(x) != 'nan'], reverse=True)
+
+        all_keys = list(find_key_with_values(row, cleanedList[-2:]))
+
+        to_print.append([row["Players"], cleanedList[-2:], all_keys[:2]])
+        for rodada in all_keys[:2]:
+            df.loc[df["Players"] == row['Players'] , rodada] = 0.0
+
+    with st.expander("Expandir para ver cortes"):
+        for pr in to_print:
+            st.write(f"Corte de {pr[0]}, {pr[1]} das rodadas : {pr[2]}")
+
+    # Cria a figura
     fig = go.Figure()
     for player in df.Players.values:
         df_here = df[df["Players"] == player][["Players"] + cols_rodadas].set_index('Players').T
@@ -23,14 +44,16 @@ if 1:
         df_here = df_here.cumsum()
         df_here["Rodadas"] = cols_rodadas    
 
-        random_x = df_here.Rodadas.values
-        random_y0 = df_here.Pontuacao.values
-
-        fig.add_trace(go.Scatter(x=random_x, y=random_y0,
+        fig.add_trace(go.Scatter(x=df_here.Rodadas.values, y=df_here.Pontuacao.values,
                             mode='lines+markers',
                             name=player))
-        fig.update_layout(title="Valor total cumulativo por rodada")
-
+        fig.update_layout(title={'text': "Valor total com corte cumulativo por rodada",
+                                 'y':0.9,
+                                 'x':0.5,
+                                 'xanchor': 'center',
+                                 'yanchor': 'top'})
+    fig.update_yaxes(range=[0, max_value], dtick=20)
+        
     st.plotly_chart(fig, use_container_width=True)
 
 # Top 10 scorers
@@ -60,11 +83,16 @@ if 1:
 
     # Update layout
     fig.update_layout(
-        title='Top 10 Individual Scores',
+        title={'text': "Top 10 Individual Scores",
+                                 'y':0.9,
+                                 'x':0.5,
+                                 'xanchor': 'center',
+                                 'yanchor': 'top'},
         xaxis_title='Players',
         yaxis_title='Score',
         xaxis_tickangle=-45,
         uniformtext_mode='hide'
     )
+    fig.update_yaxes(showgrid=False)
 
     st.plotly_chart(fig, use_container_width=True)

@@ -3,10 +3,11 @@ from datetime import datetime
 import pandas as pd
 import os
 from time import sleep
+from helper_files import update_table_geral
 st.set_page_config(layout="wide")
 
 def check_month_in_geral():
-    df = pd.read_csv("data/geral.csv")
+    df = pd.read_csv("data/geral_2024.csv")
     if df[f"Rodada {st.session_state.current_month}"].isnull().all():
         status_save = True
     else:
@@ -15,7 +16,12 @@ def check_month_in_geral():
 
     return status_save
 
+# Configuring session variables
 current_date = datetime.now()
+if 'valor_buyin' not in st.session_state:
+    st.session_state.valor_buyin = 40
+if 'valor_fidelidade' not in st.session_state:
+    st.session_state.valor_fidelidade = 10
 if "current_month" not in st.session_state:
     st.session_state.current_month = current_date.month
 
@@ -124,10 +130,10 @@ def add_final_score():
 
 cols = st.columns(5)
 with cols[0]:
-    df_geral = pd.read_csv("data/geral.csv").sort_values("Players", ascending=True)
+    df_geral = pd.read_csv("data/geral_2024.csv").sort_values("Players", ascending=True)
     lista_jogadores = [player for player in df_geral.Players.values if player not in df.Players.values]
 
-    defaulted_player = st.selectbox("Adicionar um jogador já existente", lista_jogadores, index=None)
+    defaulted_player = st.selectbox("Adicionar um jogador já existente", lista_jogadores, index=None, placeholder="Selecione um jogador...")
     new_player = st.text_input('Adicionar um novo jogador:')
 
     if defaulted_player and not new_player:
@@ -151,8 +157,14 @@ with cols[2]:
         add_final_score()
 
 with cols[3]:
-    valor_buyin = st.number_input(label="Valor do buyin/rebuy", value=40, placeholder=40, format='%d', step=1)
-    valor_fidelidade = st.number_input(label="Valor da fidelidade", value=10, placeholder=40, format='%d', step=1)
+    st.session_state.valor_buyin = st.number_input(label="Valor do buyin/rebuy", 
+                                                   value=st.session_state.valor_buyin, 
+                                                   placeholder=st.session_state.valor_buyin, 
+                                                   format='%d', step=1)
+    st.session_state.valor_fidelidade = st.number_input(label="Valor da fidelidade", 
+                                                        value=st.session_state.valor_fidelidade, 
+                                                        placeholder=st.session_state.valor_fidelidade, 
+                                                        format='%d', step=1)
 
     if st.button("Resetar sessao"):
         if len(df) > 0:
@@ -168,8 +180,8 @@ if st.button("Encerrar sessao"):
     if df[["Qtdy_Numero_fichas"]].isnull().values.any():
         st.warning("Ainda há jogadores que não informaram as fichas finais")
     else:
-        df["Valor_Buy_in"] = -df["Qtdy_Buy_in"]*valor_buyin
-        df["Valor_Rebuy"] = -df["Qtdy_Rebuy"]*valor_buyin
+        df["Valor_Buy_in"] = - df["Qtdy_Buy_in"]*st.session_state.valor_buyin
+        df["Valor_Rebuy"] = - df["Qtdy_Rebuy"]*st.session_state.valor_buyin
         df["Valor_Numero_fichas"] = df["Qtdy_Numero_fichas"]
         df["RS_total"] = df["Valor_Buy_in"] + df["Valor_Rebuy"] + df["Valor_Numero_fichas"]
 
@@ -178,7 +190,7 @@ if st.button("Encerrar sessao"):
         else:
             df = df.sort_values("RS_total", ascending=False)
             df["Ranking"] = range(1, len(df)+1)
-            df["Fidelidade"] = valor_fidelidade
+            df["Fidelidade"] = st.session_state.valor_fidelidade
             df["Hit"] = 0.5 * df["Qtdy_Hit"]
             df["F1"] = f1_score[0:len(df)]
 
@@ -187,6 +199,7 @@ if st.button("Encerrar sessao"):
 
             if status_save:
                 df.to_csv(table_name, index=False)
+                update_table_geral(st.session_state.current_month)
                 st.write('Sessão encerrada com sucesso!', icon="✅")
             else:
                 st.warning(f'Sessão encerrada! Dado foi descartado pois já ocorreu a sessão desse mês {st.session_state.current_month}!', icon="❗")
