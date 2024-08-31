@@ -2,11 +2,14 @@ import streamlit as st
 import pandas as pd
 from datetime import datetime
 from helper_files import update_table_geral
+from helper_files.sidebar import create_sidebar
 
 current_date= datetime.now()
 
 st.set_page_config(layout="wide")
 st.title(f"Classificação Geral")
+
+create_sidebar()
 
 df = pd.read_csv("data/geral_2024.csv").sort_values("Total com corte", ascending=False).reset_index(drop=True)
 cols_rodadas = [c for c in df.columns if c.startswith("Rodada")]

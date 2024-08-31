@@ -4,7 +4,12 @@ import pandas as pd
 import os
 from time import sleep
 from helper_files import update_table_geral
+from helper_files.sidebar import create_sidebar
+
+
 st.set_page_config(layout="wide")
+
+create_sidebar()
 
 def check_month_in_geral():
     df = pd.read_csv("data/geral_2024.csv")
@@ -30,7 +35,8 @@ status_save = check_month_in_geral()
 with st.expander("Configurar mes"):
     mes = st.selectbox("Mês para atualizar a classificação geral:", 
                        [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 
-                       index=None)
+                       index=None,
+                       placeholder="Selecionar mês da sessão")
     if st.button("Concluir"):
         if mes:
             st.session_state.current_month = mes
@@ -133,58 +139,67 @@ def add_final_score():
 
 cols = st.columns(5)
 with cols[0]:
-    df_geral = pd.read_csv("data/geral_2024.csv").sort_values("Players", ascending=True)
-    lista_jogadores = [player for player in df_geral.Players.values if player not in df.Players.values]
+    with st.container(border=True):
+        df_geral = pd.read_csv("data/geral_2024.csv").sort_values("Players", ascending=True)
+        lista_jogadores = [player for player in df_geral.Players.values if player not in df.Players.values]
 
-    defaulted_player = st.selectbox("Adicionar um jogador já existente", lista_jogadores, index=None, placeholder="Selecione um jogador...")
-    new_player = st.text_input('Adicionar um novo jogador:')
+        defaulted_player = st.selectbox("Adicionar um jogador já existente", lista_jogadores, index=None, placeholder="Selecione um jogador...")
+        new_player = st.text_input('Adicionar um novo jogador:')
 
-    if defaulted_player and not new_player:
-        new_player = defaulted_player
-    elif defaulted_player and new_player:
-        new_player = defaulted_player
+        if defaulted_player and not new_player:
+            new_player = defaulted_player
+        elif defaulted_player and new_player:
+            new_player = defaulted_player
 
-    # if not defaulted_player and 
-    if st.button('Adidionar jogador'):
-        add_player(new_player)
-        st.rerun()
+        # if not defaulted_player and 
+        if st.button('Adidionar jogador'):
+            add_player(new_player)
+            st.rerun()
 
 with cols[1]:
-    st.write("Durante a partida:")
-    if st.button("Adicionar um hit"):
-        add_hit()
+    with st.container(border=True):
+        st.write("Durante a partida:")
+        if st.button("Adicionar um hit"):
+            add_hit()
   
 with cols[2]:
-    st.write("Ao final da partida:")
-    if st.button("Configurar qtd fichas final"):
-        add_final_score()
+    with st.container(border=True):
+        st.write("Ao final da partida:")
+        if st.button("Configurar qtd fichas final"):
+            add_final_score()
 
 with cols[3]:
-    st.session_state.valor_buyin = st.number_input(label="Valor do buyin/rebuy", 
-                                                   value=st.session_state.valor_buyin, 
-                                                   placeholder=st.session_state.valor_buyin, 
-                                                   format='%d', step=1)
-    st.session_state.valor_fidelidade = st.number_input(label="Valor da fidelidade", 
-                                                        value=st.session_state.valor_fidelidade, 
-                                                        placeholder=st.session_state.valor_fidelidade, 
-                                                        format='%d', step=1)
+    with st.container(border=True):
+        st.session_state.valor_buyin = st.number_input(label="Valor do buyin/rebuy", 
+                                                    value=st.session_state.valor_buyin, 
+                                                    placeholder=st.session_state.valor_buyin, 
+                                                    format='%d', step=1)
+        st.session_state.valor_fidelidade = st.number_input(label="Valor da fidelidade", 
+                                                            value=st.session_state.valor_fidelidade, 
+                                                            placeholder=st.session_state.valor_fidelidade, 
+                                                            format='%d', step=1)
 
-    if st.button("Resetar sessao"):
-        if len(df) > 0:
-            df = create_empty_df(status_save)
-            st.rerun()
-        else:
-            st.warning("Sem necessidade!")
+        if st.button("Resetar sessao"):
+            if len(df) > 0:
+                df = create_empty_df(status_save)
+                st.rerun()
+            else:
+                st.warning("Sem necessidade!")
 
-st.write(f"Quantos rebuys no momento: {st.session_state.current_rebuys}")
+st.divider()
+st.write(f"Quantos rebuys no momento: ", st.session_state.current_rebuys)
 st.dataframe(df.sort_values("Players"), hide_index=True, on_select="ignore")
 st.write(f"Quantidade de fichas que tem na mesa: ", (df.Qtdy_Buy_in.sum() + df.Qtdy_Rebuy.sum()) * st.session_state.valor_buyin)
 
-##
-if st.button("Encerrar sessao"):
-    if df[["Qtdy_Numero_fichas"]].isnull().values.any():
-        st.warning("Ainda há jogadores que não informaram as fichas finais")
-    else:
+st.divider()
+@st.dialog("Encerrando sessão!")
+def encerrar_sessao(df, status_save):
+    st.write("Encerrar a sessão irá: ")
+    st.write("- Calcular os valores restantes (Buy-in, Rebuy, Numero de fichas, Rs Total, Ranking, Fidelidade, Hit, F1) ")
+    st.write("- Calcular o valor total ")
+
+
+    if st.button("Confirmar encerramento da sessão"):
         df["Valor_Buy_in"] = - df["Qtdy_Buy_in"]*st.session_state.valor_buyin
         df["Valor_Rebuy"] = - df["Qtdy_Rebuy"]*st.session_state.valor_buyin
         df["Valor_Numero_fichas"] = df["Qtdy_Numero_fichas"]
@@ -208,3 +223,10 @@ if st.button("Encerrar sessao"):
                 st.write('Sessão encerrada com sucesso!', icon="✅")
             else:
                 st.warning(f'Sessão encerrada! Dado foi descartado pois já ocorreu a sessão desse mês {st.session_state.current_month}!', icon="❗")
+
+##
+if st.button("Encerrar sessao"):
+    if df[["Qtdy_Numero_fichas"]].isnull().values.any():
+        st.warning("Ainda há jogadores que não informaram as fichas finais")
+    else:
+        encerrar_sessao(df, status_save)

@@ -3,8 +3,11 @@ import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
 from helper_files import find_key_with_values
+from helper_files.sidebar import create_sidebar
 
 st.set_page_config(layout="wide")
+
+create_sidebar()
 
 df = pd.read_csv("data/geral_2024.csv").sort_values("Total com corte", ascending=False).reset_index(drop=True)
 max_value = round(int(df["Total com corte"].max()*1.1) / 10) * 10 # Max value rounded to the nearest multiple of 10
@@ -13,6 +16,7 @@ max_value = round(int(df["Total com corte"].max()*1.1) / 10) * 10 # Max value ro
 st.write("Top 5")
 st.dataframe(df.head(5), hide_index=True, on_select="ignore")
 
+st.divider()
 cols_rodadas = [c for c in df.columns if c.startswith("Rodada")]
 df = df[["Players"] + cols_rodadas]
 
@@ -56,6 +60,7 @@ if 1:
         
     st.plotly_chart(fig, use_container_width=True)
 
+st.divider()
 # Top 10 scorers
 if 1:
     # Flatten the DataFrame to get all individual scores
