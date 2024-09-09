@@ -34,9 +34,9 @@ def optimize_transactions(df, rs_total_col='RS_total'):
         transfer_amount = min(creditor_amount, debtor_amount)
 
         transactions.append({
-            'from': debtor['Players'],  # Replace 'Player' with the actual column name containing player names
-            'to': creditor['Players'],  # Replace 'Player' with the actual column name containing player names
-            'amount': transfer_amount
+            'Pagador': debtor['Players'],  # Replace 'Player' with the actual column name containing player names
+            'Recebedor': creditor['Players'],  # Replace 'Player' with the actual column name containing player names
+            'Valor (R$)': transfer_amount
         })
 
         # Update amounts
@@ -49,7 +49,7 @@ def optimize_transactions(df, rs_total_col='RS_total'):
         if debtors.at[debtor_index, rs_total_col] == 0:
             debtor_index += 1
 
-    st.dataframe(pd.DataFrame(transactions))
+    st.dataframe(pd.DataFrame(transactions), hide_index=True)
     # return pd.DataFrame(transactions)
 
 def update_table_geral(month):
