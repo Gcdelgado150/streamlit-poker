@@ -5,7 +5,7 @@ import plotly.graph_objects as go
 from helper_files import find_key_with_values
 from helper_files.sidebar import create_sidebar
 
-st.set_page_config(layout="wide")
+st.set_page_config(page_title="Poker GMaia", page_icon=":spades:", layout="wide")
 
 create_sidebar()
 

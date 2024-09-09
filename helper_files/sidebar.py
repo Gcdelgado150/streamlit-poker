@@ -1,8 +1,8 @@
 import streamlit as st
 
 def create_sidebar():
-    st.sidebar.title("Poker GMaia")
-    st.sidebar.image("data/logo.jpg")
+    st.sidebar.image("data/logo.jpg", width=300)
+    st.sidebar.header("Poker GMAIA", divider="gray")
     
     st.sidebar.page_link("home.py", label="Análises")
 

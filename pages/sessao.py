@@ -7,7 +7,7 @@ from helper_files import update_table_geral, optimize_transactions
 from helper_files.sidebar import create_sidebar
 
 
-st.set_page_config(layout="wide")
+st.set_page_config(page_title="Visão Sessão", page_icon=":spades:", layout="wide")
 
 create_sidebar()
 

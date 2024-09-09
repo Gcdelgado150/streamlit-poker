@@ -6,7 +6,7 @@ from helper_files.sidebar import create_sidebar
 
 current_date= datetime.now()
 
-st.set_page_config(layout="wide")
+st.set_page_config(page_title="Visão Geral", page_icon=":spades:", layout="wide")
 st.title(f"Classificação Geral")
 
 create_sidebar()
@@ -21,6 +21,9 @@ def sum_desconsidering_lowest_cells(s):
   return filtered_s[filtered_s.index.str.contains('Rodada')].sum()
 
 def recalculate_geral(df):
+    for rodada in cols_rodadas + ["Total", "Total com corte"]:
+      df[rodada] = df[rodada].astype(float)
+
     df["Total"] = df[cols_rodadas].sum(axis=1)
     df["Total com corte"] = df.apply(sum_desconsidering_lowest_cells, axis=1)
     df = df.sort_values("Total com corte", ascending=False).reset_index(drop=True)
@@ -56,4 +59,7 @@ st.dataframe(styled_data, hide_index=True, on_select="ignore")
 
 st.write("Os totais e totais com corte estão errados?")
 if st.button("Recalcular os totais da tabela geral"):
-  recalculate_geral(df)
+  with st.spinner("Recalculando..."):
+     recalculate_geral(df)
+     
+  st.rerun()
