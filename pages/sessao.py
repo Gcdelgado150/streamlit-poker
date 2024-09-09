@@ -3,7 +3,7 @@ from datetime import datetime
 import pandas as pd
 import os
 from time import sleep
-from helper_files import update_table_geral
+from helper_files import update_table_geral, optimize_transactions
 from helper_files.sidebar import create_sidebar
 
 
@@ -141,9 +141,12 @@ cols = st.columns(5)
 with cols[0]:
     with st.container(border=True):
         df_geral = pd.read_csv("data/geral_2024.csv").sort_values("Players", ascending=True)
-        lista_jogadores = [player for player in df_geral.Players.values if player not in df.Players.values]
-
-        defaulted_player = st.selectbox("Adicionar um jogador já existente", lista_jogadores, index=None, placeholder="Selecione um jogador...")
+        lista_jogadores = [player for player in df_geral.Players.values]
+        
+        defaulted_player = st.selectbox("Adicionar um jogador já existente", 
+                                        options=lista_jogadores, 
+                                        index=None, 
+                                        placeholder="Selecione um jogador...")
         new_player = st.text_input('Adicionar um novo jogador:')
 
         if defaulted_player and not new_player:
@@ -153,7 +156,8 @@ with cols[0]:
 
         # if not defaulted_player and 
         if st.button('Adidionar jogador'):
-            add_player(new_player)
+            with st.spinner("Adicionando..."):
+                add_player(new_player)
             st.rerun()
 
 with cols[1]:
@@ -219,6 +223,7 @@ def encerrar_sessao(df, status_save):
 
             if status_save:
                 df.to_csv(table_name, index=False)
+                optimize_transactions(df)
                 update_table_geral(st.session_state.current_month)
                 st.write('Sessão encerrada com sucesso!', icon="✅")
             else:

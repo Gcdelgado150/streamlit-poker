@@ -13,6 +13,45 @@ def save_csv(status_save, df, filepath):
     if status_save:
         df.to_csv(filepath, index=False)
 
+def optimize_transactions(df, rs_total_col='RS_total'):
+    # Separate creditors and debtors
+    creditors = df[df[rs_total_col] > 0].sort_values(by=rs_total_col, ascending=False).reset_index(drop=True)
+    debtors = df[df[rs_total_col] < 0].sort_values(by=rs_total_col).reset_index(drop=True)
+
+    transactions = []
+
+    creditor_index = 0
+    debtor_index = 0
+
+    while creditor_index < len(creditors) and debtor_index < len(debtors):
+        creditor = creditors.iloc[creditor_index]
+        debtor = debtors.iloc[debtor_index]
+
+        creditor_amount = creditor[rs_total_col]
+        debtor_amount = -debtor[rs_total_col]
+
+        # Determine the amount to transfer
+        transfer_amount = min(creditor_amount, debtor_amount)
+
+        transactions.append({
+            'from': debtor['Players'],  # Replace 'Player' with the actual column name containing player names
+            'to': creditor['Players'],  # Replace 'Player' with the actual column name containing player names
+            'amount': transfer_amount
+        })
+
+        # Update amounts
+        creditors.at[creditor_index, rs_total_col] -= transfer_amount
+        debtors.at[debtor_index, rs_total_col] += transfer_amount
+
+        # Move to the next creditor or debtor if they are settled
+        if creditors.at[creditor_index, rs_total_col] == 0:
+            creditor_index += 1
+        if debtors.at[debtor_index, rs_total_col] == 0:
+            debtor_index += 1
+
+    st.dataframe(pd.DataFrame(transactions))
+    # return pd.DataFrame(transactions)
+
 def update_table_geral(month):
     current_date = datetime.now()
     geral_filename = f"data/geral_{current_date.year}.csv"
@@ -21,6 +60,7 @@ def update_table_geral(month):
     # month = st.selectbox("Mês para atualizar a classificação geral:", [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], index=current_date.month-1)
     df_month = pd.read_csv(monthly_filename).sort_values("Total", ascending=False).reset_index(drop=True)
     df = pd.read_csv(geral_filename).sort_values("Total com corte", ascending=False).reset_index(drop=True)
+
     cols_rodadas = [c for c in df.columns if c.startswith("Rodada")]
 
     def apply_total_com_corte(s):
