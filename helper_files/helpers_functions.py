@@ -2,6 +2,41 @@ from datetime import datetime
 import pandas as pd
 import streamlit as st
 
+
+def create_empty_df(table_name, status_save):
+    # Start empty df
+    d = {"Players": [],
+        "Qtdy_Buy_in": [],
+        "Qtdy_Rebuy": [],
+        "Qtdy_Hit": [],
+        "Qtdy_Numero_fichas": [],
+        "Valor_Buy_in": [],
+        "Valor_Rebuy": [],
+        "Valor_Numero_fichas": [],
+        "RS_total": [],
+        "Ranking": [],
+        "Fidelidade": [],
+        "Hit": [],
+        "F1": [],
+        "Total": [],
+        }
+
+    df = pd.DataFrame(d)
+    if status_save:
+        df.to_csv(table_name, index=False)
+    
+    return df
+
+def check_month_in_geral():
+    df = pd.read_csv("data/geral_2024.csv")
+    if df[f"Rodada {st.session_state.current_month}"].isnull().all():
+        status_save = True
+    else:
+        st.warning(f"O mês especificado {st.session_state.current_month} já ocorreu")
+        status_save = False
+
+    return status_save
+
 def find_key_with_values(row, values):
     for key, value in row.items():
         # Check if both values are in the current list
@@ -85,6 +120,11 @@ def update_table_geral(month):
                     df.loc[s, rodada] = 0
                 elif number_rodada == month:
                     df.loc[s, rodada] = df_month[df_month["Players"] == player].Total.values[0]
+                    
+    # Para cada jogador que faltou no mes:
+    for player in df.Players.values:
+        if player not in df_month.Players.values:
+            df.loc[df["Players"] == player, [f"Rodada {month}"]] = 0
 
     df["Total"] = df[cols_rodadas].sum()
     df["Total com corte"] = df.apply(apply_total_com_corte, axis=1)

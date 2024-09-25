@@ -1,15 +1,80 @@
 import streamlit as st
 import pandas as pd
+from datetime import datetime
 import plotly.express as px
 import plotly.graph_objects as go
 from helper_files import find_key_with_values
 from helper_files.sidebar import create_sidebar
+from helper_files import update_table_geral
 
 st.set_page_config(page_title="Poker GMaia", page_icon=":spades:", layout="wide")
-
+st.title(f"Classificação Geral com os cortes")
 create_sidebar()
 
+current_date= datetime.now()
+
+
 df = pd.read_csv("data/geral_2024.csv").sort_values("Total com corte", ascending=False).reset_index(drop=True)
+cols_rodadas = [c for c in df.columns if c.startswith("Rodada")]
+
+# Function to highlight the first 3 rows (champions)
+def sum_desconsidering_lowest_cells(s):
+  lowest = s[cols_rodadas].sort_values(ascending=True).head(2).keys().tolist()
+  filtered_s = s.drop(lowest)
+  return filtered_s[filtered_s.index.str.contains('Rodada')].sum()
+
+def recalculate_geral(df):
+    for rodada in cols_rodadas + ["Total", "Total com corte"]:
+      df[rodada] = df[rodada].astype(float)
+
+    df["Total"] = df[cols_rodadas].sum(axis=1)
+    df["Total com corte"] = df.apply(sum_desconsidering_lowest_cells, axis=1)
+    df = df.sort_values("Total com corte", ascending=False).reset_index(drop=True)
+    df.to_csv("data/geral_2024.csv", index=False)
+
+# Apply formatting to specified columns
+df[cols_rodadas + ["Total", "Total com corte"]] = df[cols_rodadas + ["Total", "Total com corte"]].applymap('{:,.2f}'.format)
+
+# Function to highlight the first 3 rows (champions)
+def highlight_lowest_cells(s):
+  lowest = s[cols_rodadas].sort_values(ascending=True).head(2)
+  return ['background-color: #c98181' if col in lowest.index.tolist() else ''  for col, value in s.items()]
+
+# Apply the highlight functions
+styled_data = df.style.apply(highlight_lowest_cells, axis=1)
+
+# Display the styled DataFrame in Streamlit
+st.dataframe(styled_data, hide_index=True, on_select="ignore")
+
+
+with st.expander("Faltando algum mês?"):
+  # Create two columns
+  col1, col2 = st.columns([1, 5])
+
+  # Place the button in the first column
+  with col1:
+      month = st.selectbox("Mês para atualizar a classificação geral:", 
+                          [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12], 
+                          index=current_date.month-1)
+      
+      if st.button("Atualizar a classificação geral"):
+          update_table_geral(month)
+  
+with st.expander("Os totais e totais com corte estão errados?"):
+  if st.button("Recalcular os totais da tabela geral"):
+    with st.spinner("Recalculando..."):
+      recalculate_geral(df)
+      
+    st.rerun()
+
+st.divider()
+
+def read_df():
+    df = pd.read_csv("data/geral_2024.csv").sort_values("Total com corte", ascending=False).reset_index(drop=True)
+    df["Classificação"] = df.index + 1
+    return df
+
+df = read_df()
 max_value = round(int(df["Total com corte"].max()*1.1) / 10) * 10 # Max value rounded to the nearest multiple of 10
 
 # Mostrar top 5

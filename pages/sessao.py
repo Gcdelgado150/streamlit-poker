@@ -3,23 +3,12 @@ from datetime import datetime
 import pandas as pd
 import os
 from time import sleep
-from helper_files import update_table_geral, optimize_transactions
+from helper_files import update_table_geral, optimize_transactions, check_month_in_geral, create_empty_df
 from helper_files.sidebar import create_sidebar
 
 
 st.set_page_config(page_title="Visão Sessão", page_icon=":spades:", layout="wide")
-
 create_sidebar()
-
-def check_month_in_geral():
-    df = pd.read_csv("data/geral_2024.csv")
-    if df[f"Rodada {st.session_state.current_month}"].isnull().all():
-        status_save = True
-    else:
-        st.warning(f"O mês especificado {st.session_state.current_month} já ocorreu")
-        status_save = False
-
-    return status_save
 
 # Configuring session variables
 current_date = datetime.now()
@@ -30,6 +19,7 @@ if 'valor_fidelidade' not in st.session_state:
 if "current_month" not in st.session_state:
     st.session_state.current_month = current_date.month
 
+# Check if the month is already saved in geral
 status_save = check_month_in_geral()
 
 with st.expander("Configurar mes"):
@@ -48,36 +38,12 @@ table_name = f"data/classificacao_{current_date.year}_{st.session_state.current_
 # Configure f1 score
 f1_score = [25, 18, 15, 12, 10, 8, 6, 4, 2, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
 
-def create_empty_df(status_save):
-    # Start empty df
-    d = {"Players": [],
-        "Qtdy_Buy_in": [],
-        "Qtdy_Rebuy": [],
-        "Qtdy_Hit": [],
-        "Qtdy_Numero_fichas": [],
-        "Valor_Buy_in": [],
-        "Valor_Rebuy": [],
-        "Valor_Numero_fichas": [],
-        "RS_total": [],
-        "Ranking": [],
-        "Fidelidade": [],
-        "Hit": [],
-        "F1": [],
-        "Total": [],
-        }
-
-    df = pd.DataFrame(d)
-    if status_save:
-        df.to_csv(table_name, index=False)
-    
-    return df
-
 if os.path.isfile(table_name):
     df = pd.read_csv(table_name)
-    d = int(df["Qtdy_Rebuy"].sum()/len(df))if len(df) > 0 else 1
+    d = int(df["Qtdy_Rebuy"].sum()/len(df)) if len(df) > 0 else 1
     st.session_state.current_rebuys = d if d > 0  else 1 # Rebuy can never be 0
 else:
-    df = create_empty_df(status_save)
+    df = create_empty_df(table_name, status_save)
     st.session_state.current_rebuys = 1
 
 def add_player(new_player):
@@ -104,6 +70,32 @@ def define_howmany_rebuys(amount_players_elim):
     if rebuys_done_already + amount_players_elim >= int(len(df)/st.session_state.current_rebuys):
         st.session_state.current_rebuys += 1
 
+cols = st.columns(5)
+
+# Add player
+with cols[0]:
+    with st.container(border=True):
+        df_geral = pd.read_csv("data/geral_2024.csv").sort_values("Players", ascending=True)
+        lista_jogadores = [player for player in df_geral.Players.values if player not in df.Players.values]
+        
+        defaulted_player = st.selectbox("Adicionar um jogador já existente", 
+                                        options=lista_jogadores, 
+                                        index=None, 
+                                        placeholder="Selecione um jogador...")
+        new_player = st.text_input('Adicionar um novo jogador:')
+
+        if defaulted_player and not new_player:
+            new_player = defaulted_player
+        elif defaulted_player and new_player:
+            new_player = defaulted_player
+
+        # if not defaulted_player and 
+        if st.button('Adidionar jogador'):
+            with st.spinner("Adicionando..."):
+                add_player(new_player)
+            st.rerun()
+
+# Add hit
 @st.dialog("Eliminação")
 def add_hit():
     lista_players = sorted(df.Players.values)
@@ -124,6 +116,13 @@ def add_hit():
 
         st.rerun()
 
+with cols[1]:
+    with st.container(border=True):
+        st.write("Durante a partida:")
+        if st.button("Adicionar um hit"):
+            add_hit()
+
+# Configure final chips
 @st.dialog("Adicionando quantidade de fichas final!")
 def add_final_score():
     lista_players = df[df['Qtdy_Numero_fichas'].isna()].Players.values
@@ -137,41 +136,13 @@ def add_final_score():
             df.to_csv(table_name, index=False)
             st.rerun()
 
-cols = st.columns(5)
-with cols[0]:
-    with st.container(border=True):
-        df_geral = pd.read_csv("data/geral_2024.csv").sort_values("Players", ascending=True)
-        lista_jogadores = [player for player in df_geral.Players.values]
-        
-        defaulted_player = st.selectbox("Adicionar um jogador já existente", 
-                                        options=lista_jogadores, 
-                                        index=None, 
-                                        placeholder="Selecione um jogador...")
-        new_player = st.text_input('Adicionar um novo jogador:')
-
-        if defaulted_player and not new_player:
-            new_player = defaulted_player
-        elif defaulted_player and new_player:
-            new_player = defaulted_player
-
-        # if not defaulted_player and 
-        if st.button('Adidionar jogador'):
-            with st.spinner("Adicionando..."):
-                add_player(new_player)
-            st.rerun()
-
-with cols[1]:
-    with st.container(border=True):
-        st.write("Durante a partida:")
-        if st.button("Adicionar um hit"):
-            add_hit()
-  
 with cols[2]:
     with st.container(border=True):
         st.write("Ao final da partida:")
         if st.button("Configurar qtd fichas final"):
             add_final_score()
 
+# Valores setados
 with cols[3]:
     with st.container(border=True):
         st.session_state.valor_buyin = st.number_input(label="Valor do buyin/rebuy", 
@@ -185,14 +156,22 @@ with cols[3]:
 
         if st.button("Resetar sessao"):
             if len(df) > 0:
-                df = create_empty_df(status_save)
+                df = create_empty_df(table_name, status_save)
                 st.rerun()
             else:
                 st.warning("Sem necessidade!")
 
 st.divider()
 st.write(f"Quantos rebuys no momento: ", st.session_state.current_rebuys)
-st.data_editor(df.sort_values("Players"), hide_index=True)
+df = st.data_editor(df.sort_values("Players"), hide_index=True, disabled=('Players', 'Qtdy_Buy_in', 'Qtdy_Numero_fichas',
+                                                                     'Valor_Buy_in', 'Valor_Rebuy', 
+                                                                     'Valor_Numero_fichas', 'RS_total', 'Ranking',
+                                                                     'Fidelidade', 'Hit', 'F1', 'Total'))
+if st.button("Salvar modificação"):
+    with st.spinner("Salvando..."):
+        df.to_csv(table_name, index=False)
+        st.success("Modificações salvas!")
+
 st.write(f"Quantidade de fichas que tem na mesa: ", (df.Qtdy_Buy_in.sum() + df.Qtdy_Rebuy.sum()) * st.session_state.valor_buyin)
 
 st.divider()
@@ -204,32 +183,32 @@ def encerrar_sessao(df, status_save):
 
 
     if st.button("Confirmar encerramento da sessão"):
-        df["Valor_Buy_in"] = - df["Qtdy_Buy_in"]*st.session_state.valor_buyin
-        df["Valor_Rebuy"] = - df["Qtdy_Rebuy"]*st.session_state.valor_buyin
-        df["Valor_Numero_fichas"] = df["Qtdy_Numero_fichas"]
-        df["RS_total"] = df["Valor_Buy_in"] + df["Valor_Rebuy"] + df["Valor_Numero_fichas"]
+        with st.spinner("Encerrando..."):
+            df["Valor_Buy_in"] = - df["Qtdy_Buy_in"]*st.session_state.valor_buyin
+            df["Valor_Rebuy"] = - df["Qtdy_Rebuy"]*st.session_state.valor_buyin
+            df["Valor_Numero_fichas"] = df["Qtdy_Numero_fichas"]
+            df["RS_total"] = df["Valor_Buy_in"] + df["Valor_Rebuy"] + df["Valor_Numero_fichas"]
 
-        if df["RS_total"].sum() != 0:
-            st.warning(f"A soma final não deu 0, algo está errado. deu {df['RS_total'].sum()}")
-        else:
-            df = df.sort_values("RS_total", ascending=False)
-            df["Ranking"] = range(1, len(df)+1)
-            df["Fidelidade"] = st.session_state.valor_fidelidade
-            df["Hit"] = 0.5 * df["Qtdy_Hit"]
-            df["F1"] = f1_score[0:len(df)]
-
-            df["Total"] = df["Fidelidade"] + df["Hit"] + df["F1"]
-            df = df.sort_values("Total", ascending=False)
-
-            if status_save:
-                df.to_csv(table_name, index=False)
-                optimize_transactions(df)
-                update_table_geral(st.session_state.current_month)
-                st.write('Sessão encerrada com sucesso!', icon="✅")
+            if df["RS_total"].sum() != 0:
+                st.warning(f"A soma final não deu 0, algo está errado. deu {df['RS_total'].sum()}")
             else:
-                st.warning(f'Sessão encerrada! Dado foi descartado pois já ocorreu a sessão desse mês {st.session_state.current_month}!', icon="❗")
+                df = df.sort_values("RS_total", ascending=False)
+                df["Ranking"] = range(1, len(df)+1)
+                df["Fidelidade"] = st.session_state.valor_fidelidade
+                df["Hit"] = 0.5 * df["Qtdy_Hit"]
+                df["F1"] = f1_score[0:len(df)]
 
-##
+                df["Total"] = df["Fidelidade"] + df["Hit"] + df["F1"]
+                df = df.sort_values("Total", ascending=False)
+
+                if status_save:
+                    df.to_csv(table_name, index=False)
+                    optimize_transactions(df)
+                    update_table_geral(st.session_state.current_month)
+                    st.write('Sessão encerrada com sucesso!', icon="✅")
+                else:
+                    st.warning(f'Sessão encerrada! Dado foi descartado pois já ocorreu a sessão desse mês {st.session_state.current_month}!', icon="❗")
+
 if st.button("Encerrar sessao"):
     if df[["Qtdy_Numero_fichas"]].isnull().values.any():
         st.warning("Ainda há jogadores que não informaram as fichas finais")
