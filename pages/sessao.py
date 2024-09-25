@@ -192,7 +192,7 @@ with cols[3]:
 
 st.divider()
 st.write(f"Quantos rebuys no momento: ", st.session_state.current_rebuys)
-st.dataframe(df.sort_values("Players"), hide_index=True, on_select="ignore")
+st.data_editor(df.sort_values("Players"), hide_index=True)
 st.write(f"Quantidade de fichas que tem na mesa: ", (df.Qtdy_Buy_in.sum() + df.Qtdy_Rebuy.sum()) * st.session_state.valor_buyin)
 
 st.divider()
